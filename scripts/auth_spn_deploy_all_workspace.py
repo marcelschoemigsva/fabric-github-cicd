@@ -9,6 +9,7 @@ Can be expanded to retrieve values from Key Vault or other sources
 # START-EXAMPLE
 from fabric_cicd import FabricWorkspace, publish_all_items, unpublish_all_orphan_items
 import argparse
+from azure.identity import DefaultAzureCredential
 
 parser = argparse.ArgumentParser(description='Process some variables.')
 parser.add_argument('--WorkspaceId', type=str)
@@ -21,7 +22,8 @@ target_workspace = FabricWorkspace(
     workspace_id= args.WorkspaceId,
     environment=args.Environment,
     repository_directory=args.RepositoryDirectory, 
-    # item_type_in_scope=item_type_in_scope,  
+    # item_type_in_scope=item_type_in_scope,
+    token_credential=DefaultAzureCredential()
 )
 
 # Publish all items defined in item_type_in_scope

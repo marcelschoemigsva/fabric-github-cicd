@@ -1,0 +1,70 @@
+name: 'Deploy Microsoft Fabric items with fabric-cicd'
+description: 'Composite action to deploy Microsoft Fabric workspace items using fabric-cicd and Az PowerShell authentication.'
+author: 'Chantified Lens'
+inputs:
+  workspace-id:
+    description: 'Workspace Id (can be passed or provided via workflow variable)'
+    required: true
+  environment-name:
+    description: 'Target environment name (e.g., Test)'
+    required: false
+    default: 'Test'
+  fabric-cicd-version:
+    description: 'Version of fabric-cicd (e.g., 0.1.30)'
+    required: false
+    default: ''
+  repository-directory:
+    description: 'Path to repository directory containing workspace items.'
+    required: false
+    default: './workspace'
+  items-in-scope:
+    description: 'ItemsInScope argument passed to the deployment script'
+    required: false
+    default: ''
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@v6.1.0
+      with:
+        python-version: 3.12
+
+    - name: Install latest fabric-cicd library
+      if: ${{ inputs.fabric-cicd-version == '' }}
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install fabric-cicd --upgrade
+
+    - name: Install specific version of fabric-cicd library
+      if: ${{ inputs.fabric-cicd-version != '' }}
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install fabric-cicd==${{ inputs.fabric-cicd-version }}
+
+    - name: Install latest azure-identity library
+      if: ${{ inputs.fabric-cicd-version == '' }}
+      shell: bash
+      run: |
+        pip install azure-identity --upgrade
+
+    - name: Deploy whole workspace (no items-in-scope)
+      if: ${{ inputs.items-in-scope == '' }}
+      shell: bash
+      env:
+        FABRIC_TOKEN: ${{ steps.Authenticate_as_Service_Principal.outputs.fabric-token }}
+      run: |
+        python "${{ github.action_path }}/scripts/auth_spn_deploy_all_workspace.py" --WorkspaceId "${{ inputs.workspace-id }}" --Environment "${{ inputs.environment-name }}" --RepositoryDirectory "${{ inputs.repository-directory }}"
+
+    - name: Deploy specific items (items-in-scope provided)
+      if: ${{ inputs.items-in-scope != '' }}
+      shell: bash
+      env:
+        FABRIC_TOKEN: ${{ steps.Authenticate_as_Service_Principal.outputs.fabric-token }}
+      run: |
+        python "${{ github.action_path }}/scripts/auth_spn_deploy_fabric_items.py" --WorkspaceId "${{ inputs.workspace-id }}" --Environment "${{ inputs.environment-name }}" --RepositoryDirectory "${{ inputs.repository-directory }}" --ItemsInScope "${{ inputs.items-in-scope }}"
+
+branding:
+  icon: 'terminal'
+  color: 'green'
